@@ -3,7 +3,6 @@ mod lists;
 mod pool;
 mod settings;
 mod tally;
-mod tcp;
 
 use std::collections::HashMap;
 use std::env;

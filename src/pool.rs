@@ -2,14 +2,15 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use panasonic_kairos::http_async::Client;
-use panasonic_kairos::{Aux, Input, MacroPatch, Scene};
+use panasonic_kairos::simple;
+use panasonic_kairos::tcp_async::Client as TcpClient;
+use panasonic_kairos::{Aux, Input, MacroPatch, Scene, TcpConfig};
 use tokio::sync::{mpsc, oneshot};
 use tokio::time::{interval, MissedTickBehavior};
 
 use crate::actions::{Job, LayerBus};
 use crate::lists;
 use crate::settings::{ActionSettings, ListItem};
-use crate::tcp::{self, TcpLink};
 
 const IDLE_SECS: u64 = 30;
 const MAX_BACKOFF: Duration = Duration::from_secs(30);
@@ -247,7 +248,7 @@ async fn run_endpoint(
     status_tx: mpsc::UnboundedSender<(EndpointKey, ConnectionStatus)>,
 ) {
     let mut client: Option<Client> = None;
-    let mut tcp: Option<TcpLink> = None;
+    let mut tcp: Option<TcpClient> = None;
     let mut backoff = Duration::from_secs(1);
     let mut keepalive = interval(Duration::from_secs(4));
     keepalive.set_missed_tick_behavior(MissedTickBehavior::Delay);
@@ -258,7 +259,7 @@ async fn run_endpoint(
             match connect(&key).await {
                 Ok(connected) => {
                     client = Some(connected);
-                    tcp = TcpLink::connect(&key.host, key.tcp_port).await.ok();
+                    tcp = connect_tcp(&key).await;
                     backoff = Duration::from_secs(1);
                     let _ = status_tx.send((key.clone(), ConnectionStatus::Connected));
                 }
@@ -292,7 +293,7 @@ async fn run_endpoint(
                     Some(Work::Exec { job, reply }) => {
                         if job.uses_tcp() {
                             if tcp.is_none() {
-                                tcp = TcpLink::connect(&key.host, key.tcp_port).await.ok();
+                                tcp = connect_tcp(&key).await;
                             }
                             let result = execute_tcp(client.as_ref(), tcp.as_mut(), job).await;
                             if result.is_err() {
@@ -315,10 +316,14 @@ async fn run_endpoint(
                     }) => {
                         if event == "kairos_stills" {
                             if tcp.is_none() {
-                                tcp = TcpLink::connect(&key.host, key.tcp_port).await.ok();
+                                tcp = connect_tcp(&key).await;
                             }
                             let result = match tcp.as_mut() {
-                                Some(link) => link.list_media_stills().await,
+                                Some(link) => link
+                                    .list_media_stills()
+                                    .await
+                                    .map(stills_to_items)
+                                    .map_err(err),
                                 None => Err("TCP not connected".into()),
                             };
                             let _ = reply.send(result);
@@ -343,6 +348,16 @@ async fn run_endpoint(
             }
         }
     }
+}
+
+async fn connect_tcp(key: &EndpointKey) -> Option<TcpClient> {
+    TcpClient::connect(
+        TcpConfig::new(&key.host)
+            .with_port(key.tcp_port)
+            .with_timeout_ms(8_000),
+    )
+    .await
+    .ok()
 }
 
 async fn connect(key: &EndpointKey) -> Result<Client, String> {
@@ -455,7 +470,7 @@ async fn execute(client: &Client, job: Job) -> Result<(), String> {
 
 async fn execute_tcp(
     client: Option<&Client>,
-    tcp: Option<&mut TcpLink>,
+    tcp: Option<&mut TcpClient>,
     job: Job,
 ) -> Result<(), String> {
     let tcp = tcp.ok_or_else(|| "TCP not connected".to_string())?;
@@ -467,13 +482,9 @@ async fn execute_tcp(
             source,
         } => {
             let (scene_name, layer_name) = resolve_layer(client, &scene, &layer).await?;
-            tcp.exec(&tcp::force_source_cmd(
-                &scene_name,
-                &layer_name,
-                bus.as_tcp(),
-                &source,
-            ))
-            .await
+            tcp.force_source(&scene_name, &layer_name, bus.as_tcp(), &source)
+                .await
+                .map_err(err)
         }
         Job::SetMediaStill {
             scene,
@@ -482,26 +493,33 @@ async fn execute_tcp(
             still,
         } => {
             let (scene_name, layer_name) = resolve_layer(client, &scene, &layer).await?;
-            tcp.exec(&tcp::media_still_cmd(
-                &scene_name,
-                &layer_name,
-                bus.as_tcp(),
-                &still,
-            ))
-            .await
+            tcp.set_media_still(&scene_name, &layer_name, bus.as_tcp(), &still)
+                .await
+                .map_err(err)
         }
         Job::LayerTransition { scene, layer, auto } => {
             let (scene_name, layer_name) = resolve_layer(client, &scene, &layer).await?;
-            tcp.exec(&tcp::layer_transition_cmd(&scene_name, &layer_name, auto))
+            tcp.layer_transition(&scene_name, &layer_name, auto)
                 .await
+                .map_err(err)
         }
-        Job::Player { player, op } => tcp.exec(&tcp::player_cmd(&player, &op)).await,
-        Job::AudioMute { channel, mute } => {
-            tcp.exec(&tcp::audio_mute_cmd(channel.as_deref(), mute))
-                .await
-        }
+        Job::Player { player, op } => tcp.player(&player, &op).await.map_err(err),
+        Job::AudioMute { channel, mute } => tcp
+            .set_audio_mute(channel.as_deref(), mute)
+            .await
+            .map_err(err),
         _ => Err("REST job routed to TCP".into()),
     }
+}
+
+fn stills_to_items(paths: Vec<String>) -> Vec<ListItem> {
+    paths
+        .into_iter()
+        .map(|value| ListItem {
+            label: simple::media_still_label(&value),
+            value,
+        })
+        .collect()
 }
 
 async fn resolve_layer(
