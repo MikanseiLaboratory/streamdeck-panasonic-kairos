@@ -2,20 +2,20 @@ use crate::settings::ActionSettings;
 use panasonic_kairos::MacroState;
 
 pub const MACRO: &str = "dev.mikanseilaboratory.kairos.macro";
-pub const SCENE_MACRO: &str = "dev.mikanseilaboratory.kairos.scene_macro";
+pub const SCENE_MACRO: &str = "dev.mikanseilaboratory.kairos.scene-macro";
 pub const SNAPSHOT: &str = "dev.mikanseilaboratory.kairos.snapshot";
 pub const ACTION: &str = "dev.mikanseilaboratory.kairos.action";
 pub const CUT: &str = "dev.mikanseilaboratory.kairos.cut";
 pub const AUTO: &str = "dev.mikanseilaboratory.kairos.auto";
 pub const AUX: &str = "dev.mikanseilaboratory.kairos.aux";
 pub const LAYER: &str = "dev.mikanseilaboratory.kairos.layer";
-pub const FORCE_SOURCE: &str = "dev.mikanseilaboratory.kairos.force_source";
-pub const MEDIA_STILL: &str = "dev.mikanseilaboratory.kairos.media_still";
-pub const LAYER_CUT: &str = "dev.mikanseilaboratory.kairos.layer_cut";
-pub const LAYER_AUTO: &str = "dev.mikanseilaboratory.kairos.layer_auto";
+pub const FORCE_SOURCE: &str = "dev.mikanseilaboratory.kairos.force-source";
+pub const MEDIA_STILL: &str = "dev.mikanseilaboratory.kairos.media-still";
+pub const LAYER_CUT: &str = "dev.mikanseilaboratory.kairos.layer-cut";
+pub const LAYER_AUTO: &str = "dev.mikanseilaboratory.kairos.layer-auto";
 pub const PLAYER: &str = "dev.mikanseilaboratory.kairos.player";
-pub const AUDIO_MUTE: &str = "dev.mikanseilaboratory.kairos.audio_mute";
-pub const INPUT_TALLY: &str = "dev.mikanseilaboratory.kairos.input_tally";
+pub const AUDIO_MUTE: &str = "dev.mikanseilaboratory.kairos.audio-mute";
+pub const INPUT_TALLY: &str = "dev.mikanseilaboratory.kairos.input-tally";
 pub const MULTIVIEWER: &str = "dev.mikanseilaboratory.kairos.multiviewer";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
