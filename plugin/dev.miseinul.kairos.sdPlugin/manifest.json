@@ -1,0 +1,85 @@
+{
+  "SDKVersion": 2,
+  "Author": "未完成成果物研究所",
+  "CodePath": "bin/plugin",
+  "CodePathWin": "bin/plugin.exe",
+  "CodePathMac": "bin/plugin",
+  "Description": "Control Panasonic KAIROS from Stream Deck (unofficial).",
+  "Name": "KAIROS",
+  "Icon": "images/plugin",
+  "Category": "KAIROS",
+  "CategoryIcon": "images/plugin",
+  "UUID": "dev.miseinul.kairos",
+  "Version": "0.1.0.0",
+  "OS": [
+    { "Platform": "windows", "MinimumVersion": "10" },
+    { "Platform": "mac", "MinimumVersion": "10.15" }
+  ],
+  "Software": { "MinimumVersion": "6.4" },
+  "Actions": [
+    {
+      "Icon": "images/plugin",
+      "Name": "Play Macro",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "Play a KAIROS macro",
+      "UUID": "dev.miseinul.kairos.macro",
+      "PropertyInspectorPath": "propertyinspector/macro.html"
+    },
+    {
+      "Icon": "images/plugin",
+      "Name": "Recall Snapshot",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "Recall a scene snapshot",
+      "UUID": "dev.miseinul.kairos.snapshot",
+      "PropertyInspectorPath": "propertyinspector/snapshot.html"
+    },
+    {
+      "Icon": "images/plugin",
+      "Name": "Scene Action",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "Play a scene action (cut, auto, show_layer, …)",
+      "UUID": "dev.miseinul.kairos.action",
+      "PropertyInspectorPath": "propertyinspector/action.html"
+    },
+    {
+      "Icon": "images/plugin",
+      "Name": "Cut",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "Play the scene :cut action",
+      "UUID": "dev.miseinul.kairos.cut",
+      "PropertyInspectorPath": "propertyinspector/cut.html"
+    },
+    {
+      "Icon": "images/plugin",
+      "Name": "Auto",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "Play the scene :auto action",
+      "UUID": "dev.miseinul.kairos.auto",
+      "PropertyInspectorPath": "propertyinspector/auto.html"
+    },
+    {
+      "Icon": "images/plugin",
+      "Name": "AUX Source",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "Set an AUX bus source",
+      "UUID": "dev.miseinul.kairos.aux",
+      "PropertyInspectorPath": "propertyinspector/aux_source.html"
+    },
+    {
+      "Icon": "images/plugin",
+      "Name": "Layer Source",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "Set a layer sourceA or sourceB",
+      "UUID": "dev.miseinul.kairos.layer",
+      "PropertyInspectorPath": "propertyinspector/layer.html"
+    },
+    {
+      "Icon": "images/plugin",
+      "Name": "Multiviewer Preset",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "Recall a multiviewer preset",
+      "UUID": "dev.miseinul.kairos.multiviewer",
+      "PropertyInspectorPath": "propertyinspector/multiviewer.html"
+    }
+  ]
+}

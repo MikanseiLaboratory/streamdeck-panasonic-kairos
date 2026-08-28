@@ -1,0 +1,21 @@
+[package]
+name = "streamdeck-panasonic-kairos"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Shugo Kawamura <ruk1ium@gmail.com>"]
+description = "Stream Deck plugin for Panasonic KAIROS"
+repository = "https://github.com/MikanseiLaboratory/streamdeck-panasonic-kairos"
+publish = false
+
+[[bin]]
+name = "plugin"
+path = "src/main.rs"
+
+[dependencies]
+futures = "0.3"
+panasonic-kairos = { git = "https://github.com/MikanseiLaboratory/panasonic-kairos-rs", default-features = false, features = ["tokio"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+streamdeck-rs = "0.8"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time"] }

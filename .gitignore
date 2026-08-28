@@ -1,0 +1,8 @@
+/target
+plugin/**/bin/
+**/*.rs.bk
+.idea/
+.vscode/
+*.streamDeckPlugin
+/dist
+.DS_Store

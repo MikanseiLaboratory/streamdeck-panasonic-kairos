@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en-gb">
+<head>
+  <meta charset="utf-8" />
+  <title>KAIROS Play Macro</title>
+  <script src="sdpi-components.js"></script>
+  <style>
+    .pi-status { margin-top: 12px; padding: 8px; border-radius: 4px; font-size: 12px; }
+    .pi-status.connected { background: #d4edda; color: #155724; }
+    .pi-status.disconnected { background: #f8d7da; color: #721c24; }
+  </style>
+</head>
+<body>
+  <sdpi-item label="Host">
+    <sdpi-textfield setting="host" placeholder="192.168.10.10"></sdpi-textfield>
+  </sdpi-item>
+
+  <sdpi-item label="Port">
+    <sdpi-textfield setting="port" placeholder="1234"></sdpi-textfield>
+  </sdpi-item>
+
+  <sdpi-item label="Password">
+    <sdpi-password setting="password"></sdpi-password>
+  </sdpi-item>
+
+  <sdpi-item label="HTTPS">
+    <sdpi-checkbox setting="https"></sdpi-checkbox>
+  </sdpi-item>
+
+  <sdpi-item label="Macro">
+    <sdpi-select
+      setting="macro_id"
+      datasource="kairos_macros"
+      loading="Loading macros..."
+      show-refresh
+      hot-reload>
+    </sdpi-select>
+  </sdpi-item>
+
+  <sdpi-item label="Connection">
+    <div id="status" class="pi-status disconnected">Not connected</div>
+  </sdpi-item>
+
+  <script src="status.js"></script>
+</body>
+</html>
