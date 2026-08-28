@@ -3,12 +3,8 @@
 use panasonic_kairos::{Credentials, HttpConfig};
 use serde::{Deserialize, Serialize};
 
-fn default_host() -> String {
-    "192.168.10.10".to_string()
-}
-
-fn default_port() -> String {
-    "1234".to_string()
+fn default_connection_pick() -> String {
+    "manual".to_string()
 }
 
 fn de_bool<'de, D>(deserializer: D) -> Result<bool, D::Error>
@@ -27,9 +23,9 @@ where
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct ActionSettings {
-    #[serde(default = "default_host")]
+    #[serde(default)]
     pub host: String,
-    #[serde(default = "default_port")]
+    #[serde(default)]
     pub port: String,
     #[serde(default)]
     pub password: String,
@@ -56,28 +52,42 @@ pub struct ActionSettings {
     pub multiviewer_id: String,
     #[serde(default)]
     pub preset_id: String,
+    /// `manual` or `host\\tport\\tpassword\\thttps`.
+    #[serde(default = "default_connection_pick")]
+    pub connection_pick: String,
 }
 
 impl ActionSettings {
-    pub fn host_trimmed(&self) -> &str {
-        self.host.trim()
-    }
-
-    pub fn port_trimmed(&self) -> &str {
-        self.port.trim()
+    pub fn connection(&self) -> (String, String, String, bool) {
+        let pick = self.connection_pick.trim();
+        if pick != "manual" && !pick.is_empty() {
+            let mut parts = pick.split('\t');
+            let host = parts.next().unwrap_or("").trim().to_string();
+            let port = parts.next().unwrap_or("").trim().to_string();
+            let password = parts.next().unwrap_or("").to_string();
+            let https = matches!(parts.next(), Some("1") | Some("true"));
+            if !host.is_empty() {
+                return (host, port, password, https);
+            }
+        }
+        (
+            self.host.trim().to_string(),
+            self.port.trim().to_string(),
+            self.password.trim().to_string(),
+            self.https,
+        )
     }
 
     pub fn http_config(&self) -> HttpConfig {
-        let host = self.host_trimmed();
-        let port = self.port_trimmed();
+        let (host, port, password, https) = self.connection();
         let addr = if port.is_empty() {
-            host.to_string()
+            host
         } else {
             format!("{host}:{port}")
         };
         HttpConfig::new(addr)
-            .with_https(self.https)
-            .with_credentials(Credentials::password(self.password.trim()))
+            .with_https(https)
+            .with_credentials(Credentials::password(password))
             .with_timeout_ms(8_000)
     }
 }
@@ -94,6 +104,15 @@ pub struct ListItem {
     pub value: String,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct EndpointInfo {
+    pub host: String,
+    pub port: String,
+    pub password: String,
+    pub https: bool,
+    pub status: String,
+}
+
 #[derive(Debug, Serialize)]
 pub struct PiOut {
     pub event: String,
@@ -101,6 +120,10 @@ pub struct PiOut {
     pub items: Option<Vec<ListItem>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub connected: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub endpoints: Option<Vec<EndpointInfo>>,
 }
 
 impl PiOut {
@@ -109,14 +132,18 @@ impl PiOut {
             event: event.into(),
             items: Some(items),
             connected: None,
+            status: None,
+            endpoints: None,
         }
     }
 
-    pub fn state(connected: bool) -> Self {
+    pub fn state(connected: bool, status: impl Into<String>, endpoints: Vec<EndpointInfo>) -> Self {
         Self {
             event: "kairos_state".into(),
             items: None,
             connected: Some(connected),
+            status: Some(status.into()),
+            endpoints: Some(endpoints),
         }
     }
 }
@@ -136,14 +163,51 @@ mod tests {
     #[test]
     fn defaults_host_and_port() {
         let s: ActionSettings = serde_json::from_str("{}").unwrap();
-        assert_eq!(s.host, "192.168.10.10");
-        assert_eq!(s.port, "1234");
+        assert_eq!(s.host, "");
+        assert_eq!(s.port, "");
         assert!(!s.https);
+        assert_eq!(s.connection_pick, "manual");
+        let (host, port, _, _) = s.connection();
+        assert!(host.is_empty());
+        assert!(port.is_empty());
+    }
+
+    #[test]
+    fn connection_pick_overrides_host_fields() {
+        let s: ActionSettings = serde_json::from_str(
+            r#"{"host":"1.1.1.1","port":"1","connection_pick":"10.0.0.5\t1234\tsecret\t1"}"#,
+        )
+        .unwrap();
+        let (host, port, password, https) = s.connection();
+        assert_eq!(host, "10.0.0.5");
+        assert_eq!(port, "1234");
+        assert_eq!(password, "secret");
+        assert!(https);
     }
 
     #[test]
     fn pi_datasource_event() {
         let msg: PiMessage = serde_json::from_str(r#"{"event":"kairos_macros"}"#).unwrap();
         assert_eq!(msg.event.as_deref(), Some("kairos_macros"));
+    }
+
+    #[test]
+    fn state_includes_endpoints() {
+        let json = serde_json::to_value(PiOut::state(
+            true,
+            "Connected",
+            vec![EndpointInfo {
+                host: "192.168.10.10".into(),
+                port: "1234".into(),
+                password: String::new(),
+                https: false,
+                status: "Connected".into(),
+            }],
+        ))
+        .unwrap();
+        assert_eq!(json["event"], "kairos_state");
+        assert_eq!(json["connected"], true);
+        assert_eq!(json["endpoints"][0]["host"], "192.168.10.10");
+        assert_eq!(json["endpoints"][0]["port"], "1234");
     }
 }

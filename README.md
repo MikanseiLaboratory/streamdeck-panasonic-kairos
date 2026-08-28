@@ -1,4 +1,4 @@
-# Stream Deck plugin for Panasonic KAIROS
+# Stream Deck plugin for Panasonic Kairos [MikanseiLaboratory]
 
 Elgato Stream DeckからPanasonic KAIROSをREST APIで操作するプラグインです。
 
@@ -12,6 +12,7 @@ Elgato Stream DeckからPanasonic KAIROSをREST APIで操作するプラグイ�
 
 - Play Macro / Recall Snapshot / Scene Action / Cut / Auto / AUX Source / Layer Source / Multiviewer Preset をキーに割り当てられます。
 - 候補リスト（macros、scenes など）は実機への GET から取得し、プロファイルの settings には UUID だけを保存します。
+- すでに別キーで接続しているホストがあれば、Property Inspector の Connection から選択できます。
 - Layer Source は sourceA 一致で赤、sourceB 一致で緑に点灯します。AUX Source は現在の source 一致で赤です。
 - 同じ `(host, port, password, https)` のキーは HTTP 接続を共有します。
 - 切断時は 1s → 2s → 4s …（上限 30s）で再接続します。

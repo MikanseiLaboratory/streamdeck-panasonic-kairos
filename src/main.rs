@@ -11,7 +11,7 @@ use std::time::Duration;
 use actions::{build_job, skip_ok};
 use futures::{SinkExt, StreamExt};
 use pool::{ConnectionStatus, EndpointKey, Pool, Work};
-use settings::{ActionSettings, PiMessage, PiOut};
+use settings::{ActionSettings, EndpointInfo, ListItem, PiMessage, PiOut};
 use streamdeck_rs::registration::RegistrationParams;
 use streamdeck_rs::{ImagePayload, Message, MessageOut, StreamDeckSocket, Target};
 use tally::{image_data_uri, TallyBinding, TallyLight};
@@ -211,6 +211,10 @@ impl Plugin {
             self.push_status(&context);
             return;
         }
+        if event == "kairos_connections" {
+            self.push_connections(&action, &context);
+            return;
+        }
         let Some(watch) = self.watches.get(&context) else {
             let _ = self.outgoing.send(Outgoing::ToPi {
                 action,
@@ -225,7 +229,7 @@ impl Plugin {
                 context: context.clone(),
                 payload: PiOut::items(event, Vec::new()),
             });
-            self.push_status_bool(&action, &context, false);
+            self.push_status(&context);
             return;
         };
         let settings = watch.binding.settings.clone();
@@ -277,6 +281,7 @@ impl Plugin {
         if !self.open_pi.contains_key(context) {
             return;
         }
+        self.push_connections(action, context);
         for event in Self::datasource_events(action) {
             self.on_pi_message(
                 action.to_string(),
@@ -286,6 +291,50 @@ impl Plugin {
                 },
             );
         }
+    }
+
+    fn connection_items(&self) -> Vec<ListItem> {
+        let list = self.pool.endpoint_list();
+        let mut host_counts: HashMap<String, usize> = HashMap::new();
+        for (key, _) in &list {
+            *host_counts
+                .entry(format!("{}:{}", key.host, key.port))
+                .or_default() += 1;
+        }
+        let mut items = vec![ListItem {
+            label: "Enter host".into(),
+            value: "manual".into(),
+        }];
+        for (key, status) in list {
+            let mut addr = if key.port.is_empty() {
+                key.host.clone()
+            } else {
+                format!("{}:{}", key.host, key.port)
+            };
+            if key.https {
+                addr.push_str(" (https)");
+            }
+            let count_key = format!("{}:{}", key.host, key.port);
+            let label = if host_counts.get(&count_key).copied().unwrap_or(0) > 1 {
+                format!("{} ({}) · {status}", addr, key.password)
+            } else {
+                format!("{addr} · {status}")
+            };
+            let https = if key.https { "1" } else { "0" };
+            items.push(ListItem {
+                label,
+                value: format!("{}\t{}\t{}\t{https}", key.host, key.port, key.password),
+            });
+        }
+        items
+    }
+
+    fn push_connections(&self, action: &str, context: &str) {
+        let _ = self.outgoing.send(Outgoing::ToPi {
+            action: action.to_string(),
+            context: context.to_string(),
+            payload: PiOut::items("kairos_connections", self.connection_items()),
+        });
     }
 
     fn watch_key(&mut self, action: String, context: String, settings: ActionSettings) {
@@ -303,6 +352,7 @@ impl Plugin {
         );
         self.refresh_tally_image(&context, None);
         self.refresh_open_lists(&action, &context);
+        self.broadcast_status();
     }
 
     fn unwatch_key(&mut self, context: &str) {
@@ -322,10 +372,12 @@ impl Plugin {
                 self.refresh_tally_image(&context, Some(None));
             }
         }
-        for context in self.pool.contexts_for(&key) {
-            if let Some(action) = self.open_pi.get(&context).cloned() {
-                self.push_status_bool(&action, &context, connected);
-            }
+        self.broadcast_status();
+    }
+
+    fn broadcast_status(&self) {
+        for context in self.open_pi.keys().cloned().collect::<Vec<_>>() {
+            self.push_status(&context);
         }
     }
 
@@ -337,15 +389,29 @@ impl Plugin {
             .pool
             .status_for_context(context)
             .is_some_and(ConnectionStatus::is_connected);
-        self.push_status_bool(action, context, connected);
-    }
-
-    fn push_status_bool(&self, action: &str, context: &str, connected: bool) {
+        let label = self
+            .pool
+            .status_for_context(context)
+            .map(ConnectionStatus::label)
+            .unwrap_or_else(|| "Not connected".to_string());
+        let endpoints = self
+            .pool
+            .endpoint_list()
+            .into_iter()
+            .map(|(key, status)| EndpointInfo {
+                host: key.host,
+                port: key.port,
+                password: key.password,
+                https: key.https,
+                status,
+            })
+            .collect();
         let _ = self.outgoing.send(Outgoing::ToPi {
             action: action.to_string(),
             context: context.to_string(),
-            payload: PiOut::state(connected),
+            payload: PiOut::state(connected, label, endpoints),
         });
+        self.push_connections(action, context);
     }
 
     fn poll_tally(&mut self) {

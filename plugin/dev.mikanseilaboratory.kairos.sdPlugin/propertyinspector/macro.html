@@ -11,6 +11,19 @@
   </style>
 </head>
 <body>
+  <sdpi-item label="Connection">
+    <sdpi-select
+      id="connection_pick"
+      setting="connection_pick"
+      datasource="kairos_connections"
+      loading="Loading connections..."
+      hot-reload>
+    </sdpi-select>
+  </sdpi-item>
+  <sdpi-item label="Status">
+    <div id="status" class="pi-status disconnected">Not connected</div>
+  </sdpi-item>
+  <div id="manual-connection">
   <sdpi-item label="Host">
     <sdpi-textfield setting="host" placeholder="192.168.10.10"></sdpi-textfield>
   </sdpi-item>
@@ -26,6 +39,7 @@
   <sdpi-item label="HTTPS">
     <sdpi-checkbox setting="https"></sdpi-checkbox>
   </sdpi-item>
+  </div>
 
   <sdpi-item label="Macro">
     <sdpi-select
@@ -37,10 +51,6 @@
     </sdpi-select>
   </sdpi-item>
 
-  <sdpi-item label="Connection">
-    <div id="status" class="pi-status disconnected">Not connected</div>
-  </sdpi-item>
-
-  <script src="status.js"></script>
+  <script src="connection.js"></script>
 </body>
 </html>

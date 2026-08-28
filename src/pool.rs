@@ -22,15 +22,15 @@ pub struct EndpointKey {
 
 impl EndpointKey {
     pub fn from_settings(settings: &ActionSettings) -> Option<Self> {
-        let host = settings.host_trimmed();
+        let (host, port, password, https) = settings.connection();
         if host.is_empty() {
             return None;
         }
         Some(Self {
-            host: host.to_string(),
-            port: settings.port_trimmed().to_string(),
-            password: settings.password.trim().to_string(),
-            https: settings.https,
+            host,
+            port,
+            password,
+            https,
         })
     }
 }
@@ -121,6 +121,32 @@ impl Pool {
         self.visible
             .iter()
             .filter_map(|(ctx, k)| if k == key { Some(ctx.clone()) } else { None })
+            .collect()
+    }
+
+    pub fn endpoint_list(&self) -> Vec<(EndpointKey, String)> {
+        let mut keys: Vec<EndpointKey> = self.endpoints.keys().cloned().collect();
+        for key in self.visible.values() {
+            if !keys.iter().any(|existing| existing == key) {
+                keys.push(key.clone());
+            }
+        }
+        keys.sort_by(|a, b| {
+            a.host
+                .cmp(&b.host)
+                .then(a.port.cmp(&b.port))
+                .then(a.password.cmp(&b.password))
+                .then(a.https.cmp(&b.https))
+        });
+        keys.into_iter()
+            .map(|key| {
+                let status = self
+                    .statuses
+                    .get(&key)
+                    .map(ConnectionStatus::label)
+                    .unwrap_or_else(|| "Not connected".to_string());
+                (key, status)
+            })
             .collect()
     }
 
@@ -367,4 +393,15 @@ async fn execute(client: &Client, job: Job) -> Result<(), String> {
 
 fn err(e: impl std::fmt::Display) -> String {
     e.to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn missing_host_is_not_an_endpoint() {
+        let settings: ActionSettings = serde_json::from_str("{}").unwrap();
+        assert!(EndpointKey::from_settings(&settings).is_none());
+    }
 }
