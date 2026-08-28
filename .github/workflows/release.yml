@@ -1,0 +1,130 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: windows
+          - os: macos-latest
+            artifact: macos
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Windows
+        if: runner.os == 'Windows'
+        run: cargo build --release
+
+      - name: Stage Windows binary
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path plugin/dev.mikanseilaboratory.kairos.sdPlugin/bin | Out-Null
+          Copy-Item target/release/plugin.exe plugin/dev.mikanseilaboratory.kairos.sdPlugin/bin/plugin.exe
+
+      - name: Build macOS universal
+        if: runner.os == 'macOS'
+        run: |
+          rustup target add x86_64-apple-darwin aarch64-apple-darwin
+          cargo build --release --target aarch64-apple-darwin
+          cargo build --release --target x86_64-apple-darwin
+          mkdir -p plugin/dev.mikanseilaboratory.kairos.sdPlugin/bin
+          lipo -create -output plugin/dev.mikanseilaboratory.kairos.sdPlugin/bin/plugin \
+            target/aarch64-apple-darwin/release/plugin \
+            target/x86_64-apple-darwin/release/plugin
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: plugin/dev.mikanseilaboratory.kairos.sdPlugin
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Pack .streamDeckPlugin
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          PLUGIN=dev.mikanseilaboratory.kairos.sdPlugin
+          VERSION="${TAG#v}"
+          if [[ "$VERSION" =~ ^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            PLUGIN_VERSION="${BASH_REMATCH[1]}"
+          elif [[ "$VERSION" =~ ^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)-(alpha|beta|rc)(\.[0-9]+)?$ ]]; then
+            PLUGIN_VERSION="${BASH_REMATCH[1]}"
+          else
+            echo "::error::Unsupported tag '${TAG}'. Use v0.1.0.0 or v0.1.0.0-alpha.1."
+            exit 1
+          fi
+          export PLUGIN_VERSION
+          rm -rf dist
+          mkdir -p "dist/${PLUGIN}/bin"
+          cp -R plugin/${PLUGIN}/. "dist/${PLUGIN}/"
+          WIN_EXE=$(find artifacts/windows -name plugin.exe | head -n 1)
+          MAC_BIN=$(find artifacts/macos -path '*/bin/plugin' | head -n 1)
+          cp "$WIN_EXE" "dist/${PLUGIN}/bin/plugin.exe"
+          cp "$MAC_BIN" "dist/${PLUGIN}/bin/plugin"
+          chmod +x "dist/${PLUGIN}/bin/plugin"
+          MANIFEST="dist/${PLUGIN}/manifest.json"
+          jq --arg v "${PLUGIN_VERSION}" '.Version = $v' "${MANIFEST}" > "${MANIFEST}.tmp"
+          mv "${MANIFEST}.tmp" "${MANIFEST}"
+          npm install -g @elgato/cli@1.9.0
+          streamdeck pack "dist/${PLUGIN}" \
+            --output . \
+            --force \
+            --no-update-check
+          test -f dev.mikanseilaboratory.kairos.streamDeckPlugin
+
+      - name: Determine release channel
+        id: channel
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          elif [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)(\.[0-9]+)?$ ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Unsupported tag '${TAG}'."
+            exit 1
+          fi
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PRERELEASE: ${{ steps.channel.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          args=(
+            "${{ github.ref_name }}"
+            "dev.mikanseilaboratory.kairos.streamDeckPlugin"
+            --repo "${{ github.repository }}"
+            --title "${{ github.ref_name }}"
+            --generate-notes
+          )
+          if [ "${PRERELEASE}" = "true" ]; then
+            args+=(--prerelease)
+          fi
+          gh release create "${args[@]}"

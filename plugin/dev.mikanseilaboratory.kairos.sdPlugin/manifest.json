@@ -1,0 +1,149 @@
+{
+  "SDKVersion": 2,
+  "Author": "未完成成果物研究所",
+  "CodePath": "bin/plugin",
+  "CodePathWin": "bin/plugin.exe",
+  "CodePathMac": "bin/plugin",
+  "Description": "Control Panasonic KAIROS from Stream Deck (unofficial).",
+  "Name": "Panasonic Kairos [MikanseiLaboratory]",
+  "Icon": "images/plugin",
+  "Category": "Panasonic Kairos [MikanseiLaboratory]",
+  "CategoryIcon": "images/plugin",
+  "UUID": "dev.mikanseilaboratory.kairos",
+  "Version": "0.1.0.0",
+  "OS": [
+    { "Platform": "windows", "MinimumVersion": "10" },
+    { "Platform": "mac", "MinimumVersion": "10.15" }
+  ],
+  "Software": { "MinimumVersion": "6.4" },
+  "Actions": [
+    {
+      "Icon": "images/plugin",
+      "Name": "Play Macro",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "Play, stop, or record a KAIROS macro",
+      "UUID": "dev.mikanseilaboratory.kairos.macro",
+      "PropertyInspectorPath": "propertyinspector/macro.html"
+    },
+    {
+      "Icon": "images/plugin",
+      "Name": "Scene Macro",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "Play, stop, or record a scene-scoped macro",
+      "UUID": "dev.mikanseilaboratory.kairos.scene_macro",
+      "PropertyInspectorPath": "propertyinspector/scene_macro.html"
+    },
+    {
+      "Icon": "images/plugin",
+      "Name": "Recall Snapshot",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "Recall a scene snapshot",
+      "UUID": "dev.mikanseilaboratory.kairos.snapshot",
+      "PropertyInspectorPath": "propertyinspector/snapshot.html"
+    },
+    {
+      "Icon": "images/plugin",
+      "Name": "Scene Action",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "Play a scene action (cut, auto, show_layer, …)",
+      "UUID": "dev.mikanseilaboratory.kairos.action",
+      "PropertyInspectorPath": "propertyinspector/action.html"
+    },
+    {
+      "Icon": "images/plugin",
+      "Name": "Cut",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "Play the scene :cut action",
+      "UUID": "dev.mikanseilaboratory.kairos.cut",
+      "PropertyInspectorPath": "propertyinspector/cut.html"
+    },
+    {
+      "Icon": "images/plugin",
+      "Name": "Auto",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "Play the scene :auto action",
+      "UUID": "dev.mikanseilaboratory.kairos.auto",
+      "PropertyInspectorPath": "propertyinspector/auto.html"
+    },
+    {
+      "Icon": "images/plugin",
+      "Name": "AUX Source",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "Set an AUX bus source",
+      "UUID": "dev.mikanseilaboratory.kairos.aux",
+      "PropertyInspectorPath": "propertyinspector/aux_source.html"
+    },
+    {
+      "Icon": "images/plugin",
+      "Name": "Layer Source",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "Set a layer sourceA or sourceB",
+      "UUID": "dev.mikanseilaboratory.kairos.layer",
+      "PropertyInspectorPath": "propertyinspector/layer.html"
+    },
+    {
+      "Icon": "images/plugin",
+      "Name": "Force Source",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "Assign a layer source immediately over TCP",
+      "UUID": "dev.mikanseilaboratory.kairos.force_source",
+      "PropertyInspectorPath": "propertyinspector/force_source.html"
+    },
+    {
+      "Icon": "images/plugin",
+      "Name": "Media Still",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "Assign a media still to a layer over TCP",
+      "UUID": "dev.mikanseilaboratory.kairos.media_still",
+      "PropertyInspectorPath": "propertyinspector/media_still.html"
+    },
+    {
+      "Icon": "images/plugin",
+      "Name": "Layer Cut",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "Layer CUT transition over TCP",
+      "UUID": "dev.mikanseilaboratory.kairos.layer_cut",
+      "PropertyInspectorPath": "propertyinspector/layer_cut.html"
+    },
+    {
+      "Icon": "images/plugin",
+      "Name": "Layer Auto",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "Layer AUTO transition over TCP",
+      "UUID": "dev.mikanseilaboratory.kairos.layer_auto",
+      "PropertyInspectorPath": "propertyinspector/layer_auto.html"
+    },
+    {
+      "Icon": "images/plugin",
+      "Name": "Player",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "RAM / clip player control over TCP",
+      "UUID": "dev.mikanseilaboratory.kairos.player",
+      "PropertyInspectorPath": "propertyinspector/player.html"
+    },
+    {
+      "Icon": "images/plugin",
+      "Name": "Audio Mute",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "Mute or unmute the audio mixer over TCP",
+      "UUID": "dev.mikanseilaboratory.kairos.audio_mute",
+      "PropertyInspectorPath": "propertyinspector/audio_mute.html"
+    },
+    {
+      "Icon": "images/plugin",
+      "Name": "Input Tally",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "Show program/preview tally for an input",
+      "UUID": "dev.mikanseilaboratory.kairos.input_tally",
+      "PropertyInspectorPath": "propertyinspector/input_tally.html"
+    },
+    {
+      "Icon": "images/plugin",
+      "Name": "Multiviewer Preset",
+      "States": [{ "Image": "images/plugin" }],
+      "Tooltip": "Recall a multiviewer preset",
+      "UUID": "dev.mikanseilaboratory.kairos.multiviewer",
+      "PropertyInspectorPath": "propertyinspector/multiviewer.html"
+    }
+  ]
+}

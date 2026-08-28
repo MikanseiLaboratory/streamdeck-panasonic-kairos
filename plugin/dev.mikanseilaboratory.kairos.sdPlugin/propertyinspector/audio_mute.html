@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en-gb">
+<head>
+  <meta charset="utf-8" />
+  <title>KAIROS Audio Mute</title>
+  <script src="sdpi-components.js"></script>
+  <style>
+    .pi-status { margin-top: 12px; padding: 8px; border-radius: 4px; font-size: 12px; }
+    .pi-status.connected { background: #d4edda; color: #155724; }
+    .pi-status.disconnected { background: #f8d7da; color: #721c24; }
+  </style>
+</head>
+<body>
+  <sdpi-item label="Connection">
+    <sdpi-select
+      id="connection_pick"
+      setting="connection_pick"
+      datasource="kairos_connections"
+      loading="Loading connections..."
+      hot-reload>
+    </sdpi-select>
+  </sdpi-item>
+  <sdpi-item label="Status">
+    <div id="status" class="pi-status disconnected">Not connected</div>
+  </sdpi-item>
+  <div id="manual-connection">
+  <sdpi-item label="Host">
+    <sdpi-textfield setting="host" placeholder="192.168.10.10"></sdpi-textfield>
+  </sdpi-item>
+  <sdpi-item label="Port">
+    <sdpi-textfield setting="port" placeholder="1234"></sdpi-textfield>
+  </sdpi-item>
+  <sdpi-item label="TCP Port">
+    <sdpi-textfield setting="tcp_port" placeholder="3005"></sdpi-textfield>
+  </sdpi-item>
+  <sdpi-item label="Password">
+    <sdpi-password setting="password"></sdpi-password>
+  </sdpi-item>
+  <sdpi-item label="HTTPS">
+    <sdpi-checkbox setting="https"></sdpi-checkbox>
+  </sdpi-item>
+  </div>
+  <sdpi-item label="Target">
+    <sdpi-select setting="audio_target">
+      <option value="master">Master</option>
+      <option value="Channel 1">Channel 1</option>
+      <option value="Channel 2">Channel 2</option>
+      <option value="Channel 3">Channel 3</option>
+      <option value="Channel 4">Channel 4</option>
+      <option value="Channel 5">Channel 5</option>
+      <option value="Channel 6">Channel 6</option>
+      <option value="Channel 7">Channel 7</option>
+      <option value="Channel 8">Channel 8</option>
+      <option value="Channel 9">Channel 9</option>
+      <option value="Channel 10">Channel 10</option>
+      <option value="Channel 11">Channel 11</option>
+      <option value="Channel 12">Channel 12</option>
+      <option value="Channel 13">Channel 13</option>
+      <option value="Channel 14">Channel 14</option>
+      <option value="Channel 15">Channel 15</option>
+      <option value="Channel 16">Channel 16</option>
+    </sdpi-select>
+  </sdpi-item>
+  <sdpi-item label="Mute">
+    <sdpi-select setting="audio_mute">
+      <option value="0">Unmute</option>
+      <option value="1">Mute</option>
+    </sdpi-select>
+  </sdpi-item>
+  <script src="connection.js"></script>
+</body>
+</html>
+
