@@ -3,6 +3,7 @@ mod lists;
 mod pool;
 mod settings;
 mod tally;
+mod tcp;
 
 use std::collections::HashMap;
 use std::env;
@@ -267,11 +268,18 @@ impl Plugin {
     fn datasource_events(action: &str) -> &'static [&'static str] {
         match action {
             actions::MACRO => &["kairos_macros"],
+            actions::SCENE_MACRO => &["kairos_scenes", "kairos_scene_macros"],
             actions::SNAPSHOT => &["kairos_scenes", "kairos_snapshots"],
             actions::ACTION => &["kairos_scenes", "kairos_actions"],
             actions::CUT | actions::AUTO => &["kairos_scenes"],
             actions::AUX => &["kairos_aux", "kairos_aux_sources"],
-            actions::LAYER => &["kairos_scenes", "kairos_layers", "kairos_layer_sources"],
+            actions::LAYER | actions::FORCE_SOURCE => {
+                &["kairos_scenes", "kairos_layers", "kairos_layer_sources"]
+            }
+            actions::MEDIA_STILL => &["kairos_scenes", "kairos_layers", "kairos_stills"],
+            actions::LAYER_CUT | actions::LAYER_AUTO => &["kairos_scenes", "kairos_layers"],
+            actions::PLAYER => &["kairos_players"],
+            actions::INPUT_TALLY => &["kairos_inputs"],
             actions::MULTIVIEWER => &["kairos_multiviewers", "kairos_presets"],
             _ => &[],
         }
@@ -323,7 +331,10 @@ impl Plugin {
             let https = if key.https { "1" } else { "0" };
             items.push(ListItem {
                 label,
-                value: format!("{}\t{}\t{}\t{https}", key.host, key.port, key.password),
+                value: format!(
+                    "{}\t{}\t{}\t{https}\t{}",
+                    key.host, key.port, key.password, key.tcp_port
+                ),
             });
         }
         items
@@ -450,7 +461,7 @@ impl Plugin {
                     return;
                 };
                 for (context, binding) in watches {
-                    let light = tally::light_for(&binding, &snap.scenes, &snap.auxes);
+                    let light = tally::light_for(&binding, &snap.scenes, &snap.auxes, &snap.inputs);
                     let image = light.map(image_data_uri);
                     let _ = outgoing.send(Outgoing::SetImage { context, image });
                 }
@@ -472,6 +483,9 @@ impl Plugin {
     }
 
     fn run_action(&mut self, action: String, context: String, settings: ActionSettings) {
+        if action == actions::INPUT_TALLY {
+            return;
+        }
         let job = match build_job(&action, &settings) {
             Ok(job) => job,
             Err(e) => {

@@ -2,12 +2,14 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use panasonic_kairos::http_async::Client;
-use panasonic_kairos::{Aux, Scene};
+use panasonic_kairos::{Aux, Input, MacroPatch, Scene};
 use tokio::sync::{mpsc, oneshot};
+use tokio::time::{interval, MissedTickBehavior};
 
 use crate::actions::{Job, LayerBus};
 use crate::lists;
 use crate::settings::{ActionSettings, ListItem};
+use crate::tcp::{self, TcpLink};
 
 const IDLE_SECS: u64 = 30;
 const MAX_BACKOFF: Duration = Duration::from_secs(30);
@@ -18,11 +20,12 @@ pub struct EndpointKey {
     pub port: String,
     pub password: String,
     pub https: bool,
+    pub tcp_port: u16,
 }
 
 impl EndpointKey {
     pub fn from_settings(settings: &ActionSettings) -> Option<Self> {
-        let (host, port, password, https) = settings.connection();
+        let (host, port, password, https, _tcp) = settings.connection_full();
         if host.is_empty() {
             return None;
         }
@@ -31,6 +34,7 @@ impl EndpointKey {
             port,
             password,
             https,
+            tcp_port: settings.tcp_port(),
         })
     }
 }
@@ -62,6 +66,7 @@ impl ConnectionStatus {
 pub struct TallySnapshot {
     pub scenes: Vec<Scene>,
     pub auxes: Vec<Aux>,
+    pub inputs: Vec<Input>,
 }
 
 pub enum Work {
@@ -137,6 +142,7 @@ impl Pool {
                 .then(a.port.cmp(&b.port))
                 .then(a.password.cmp(&b.password))
                 .then(a.https.cmp(&b.https))
+                .then(a.tcp_port.cmp(&b.tcp_port))
         });
         keys.into_iter()
             .map(|key| {
@@ -241,7 +247,10 @@ async fn run_endpoint(
     status_tx: mpsc::UnboundedSender<(EndpointKey, ConnectionStatus)>,
 ) {
     let mut client: Option<Client> = None;
+    let mut tcp: Option<TcpLink> = None;
     let mut backoff = Duration::from_secs(1);
+    let mut keepalive = interval(Duration::from_secs(4));
+    keepalive.set_missed_tick_behavior(MissedTickBehavior::Delay);
 
     loop {
         if client.is_none() {
@@ -249,10 +258,12 @@ async fn run_endpoint(
             match connect(&key).await {
                 Ok(connected) => {
                     client = Some(connected);
+                    tcp = TcpLink::connect(&key.host, key.tcp_port).await.ok();
                     backoff = Duration::from_secs(1);
                     let _ = status_tx.send((key.clone(), ConnectionStatus::Connected));
                 }
                 Err(e) => {
+                    tcp = None;
                     let status = ConnectionStatus::Retrying {
                         backoff_secs: backoff.as_secs().max(1),
                         error: e,
@@ -267,35 +278,68 @@ async fn run_endpoint(
             }
         }
 
-        match rx.recv().await {
-            None | Some(Work::Stop) => return,
-            Some(Work::Exec { job, reply }) => {
-                let Some(c) = client.as_ref() else { continue };
-                let result = execute(c, job).await;
-                if result.is_err() {
-                    client = None;
+        tokio::select! {
+            _ = keepalive.tick() => {
+                if let Some(link) = tcp.as_mut() {
+                    if link.keep_alive().await.is_err() {
+                        tcp = None;
+                    }
                 }
-                let _ = reply.send(result);
             }
-            Some(Work::Lists {
-                event,
-                settings,
-                reply,
-            }) => {
-                let Some(c) = client.as_ref() else { continue };
-                let result = lists::datasource(c, &event, &settings).await;
-                if result.is_err() {
-                    client = None;
+            work = rx.recv() => {
+                match work {
+                    None | Some(Work::Stop) => return,
+                    Some(Work::Exec { job, reply }) => {
+                        if job.uses_tcp() {
+                            if tcp.is_none() {
+                                tcp = TcpLink::connect(&key.host, key.tcp_port).await.ok();
+                            }
+                            let result = execute_tcp(client.as_ref(), tcp.as_mut(), job).await;
+                            if result.is_err() {
+                                tcp = None;
+                            }
+                            let _ = reply.send(result);
+                        } else {
+                            let Some(c) = client.as_ref() else { continue };
+                            let result = execute(c, job).await;
+                            if result.is_err() {
+                                client = None;
+                            }
+                            let _ = reply.send(result);
+                        }
+                    }
+                    Some(Work::Lists {
+                        event,
+                        settings,
+                        reply,
+                    }) => {
+                        if event == "kairos_stills" {
+                            if tcp.is_none() {
+                                tcp = TcpLink::connect(&key.host, key.tcp_port).await.ok();
+                            }
+                            let result = match tcp.as_mut() {
+                                Some(link) => link.list_media_stills().await,
+                                None => Err("TCP not connected".into()),
+                            };
+                            let _ = reply.send(result);
+                            continue;
+                        }
+                        let Some(c) = client.as_ref() else { continue };
+                        let result = lists::datasource(c, &event, &settings).await;
+                        if result.is_err() {
+                            client = None;
+                        }
+                        let _ = reply.send(result);
+                    }
+                    Some(Work::Tally { reply }) => {
+                        let Some(c) = client.as_ref() else { continue };
+                        let result = tally_snapshot(c).await;
+                        if result.is_err() {
+                            client = None;
+                        }
+                        let _ = reply.send(result);
+                    }
                 }
-                let _ = reply.send(result);
-            }
-            Some(Work::Tally { reply }) => {
-                let Some(c) = client.as_ref() else { continue };
-                let result = tally_snapshot(c).await;
-                if result.is_err() {
-                    client = None;
-                }
-                let _ = reply.send(result);
             }
         }
     }
@@ -307,6 +351,7 @@ async fn connect(key: &EndpointKey) -> Result<Client, String> {
         port: key.port.clone(),
         password: key.password.clone(),
         https: key.https,
+        tcp_port: key.tcp_port.to_string(),
         ..ActionSettings::default()
     };
     let client = Client::connect(settings.http_config()).map_err(|e| e.to_string())?;
@@ -317,7 +362,12 @@ async fn connect(key: &EndpointKey) -> Result<Client, String> {
 async fn tally_snapshot(client: &Client) -> Result<TallySnapshot, String> {
     let scenes = client.list_scenes().await.map_err(|e| e.to_string())?;
     let auxes = client.list_aux().await.map_err(|e| e.to_string())?;
-    Ok(TallySnapshot { scenes, auxes })
+    let inputs = client.list_inputs().await.map_err(|e| e.to_string())?;
+    Ok(TallySnapshot {
+        scenes,
+        auxes,
+        inputs,
+    })
 }
 
 async fn wait_backoff(
@@ -346,7 +396,14 @@ async fn wait_backoff(
 
 async fn execute(client: &Client, job: Job) -> Result<(), String> {
     match job {
-        Job::PlayMacro { id } => client.play_macro(id).await.map_err(err),
+        Job::PlayMacro { id, state } => client
+            .patch_macro(id, &MacroPatch::with_state(state))
+            .await
+            .map_err(err),
+        Job::PlaySceneMacro { scene, id, state } => client
+            .patch_scene_macro(scene, id, &MacroPatch::with_state(state))
+            .await
+            .map_err(err),
         Job::RecallSnapshot { scene, snapshot } => {
             client.recall_snapshot(scene, snapshot).await.map_err(err)
         }
@@ -388,7 +445,80 @@ async fn execute(client: &Client, job: Job) -> Result<(), String> {
             .set_multiviewer_preset(multiviewer, preset)
             .await
             .map_err(err),
+        Job::ForceSource { .. }
+        | Job::SetMediaStill { .. }
+        | Job::LayerTransition { .. }
+        | Job::Player { .. }
+        | Job::AudioMute { .. } => Err("TCP job routed to REST".into()),
     }
+}
+
+async fn execute_tcp(
+    client: Option<&Client>,
+    tcp: Option<&mut TcpLink>,
+    job: Job,
+) -> Result<(), String> {
+    let tcp = tcp.ok_or_else(|| "TCP not connected".to_string())?;
+    match job {
+        Job::ForceSource {
+            scene,
+            layer,
+            bus,
+            source,
+        } => {
+            let (scene_name, layer_name) = resolve_layer(client, &scene, &layer).await?;
+            tcp.exec(&tcp::force_source_cmd(
+                &scene_name,
+                &layer_name,
+                bus.as_tcp(),
+                &source,
+            ))
+            .await
+        }
+        Job::SetMediaStill {
+            scene,
+            layer,
+            bus,
+            still,
+        } => {
+            let (scene_name, layer_name) = resolve_layer(client, &scene, &layer).await?;
+            tcp.exec(&tcp::media_still_cmd(
+                &scene_name,
+                &layer_name,
+                bus.as_tcp(),
+                &still,
+            ))
+            .await
+        }
+        Job::LayerTransition { scene, layer, auto } => {
+            let (scene_name, layer_name) = resolve_layer(client, &scene, &layer).await?;
+            tcp.exec(&tcp::layer_transition_cmd(&scene_name, &layer_name, auto))
+                .await
+        }
+        Job::Player { player, op } => tcp.exec(&tcp::player_cmd(&player, &op)).await,
+        Job::AudioMute { channel, mute } => {
+            tcp.exec(&tcp::audio_mute_cmd(channel.as_deref(), mute))
+                .await
+        }
+        _ => Err("REST job routed to TCP".into()),
+    }
+}
+
+async fn resolve_layer(
+    client: Option<&Client>,
+    scene_id: &str,
+    layer_id: &str,
+) -> Result<(String, String), String> {
+    let Some(client) = client else {
+        return Ok((scene_id.to_string(), layer_id.to_string()));
+    };
+    let scene = client.get_scene(scene_id).await.map_err(err)?;
+    let layer = scene
+        .layers
+        .iter()
+        .find(|l| l.name == layer_id || l.uuid.as_deref() == Some(layer_id))
+        .ok_or_else(|| format!("layer {layer_id} not found"))?;
+    Ok((scene.name, layer.name.clone()))
 }
 
 fn err(e: impl std::fmt::Display) -> String {

@@ -1,12 +1,21 @@
 use crate::settings::ActionSettings;
+use panasonic_kairos::MacroState;
 
 pub const MACRO: &str = "dev.mikanseilaboratory.kairos.macro";
+pub const SCENE_MACRO: &str = "dev.mikanseilaboratory.kairos.scene_macro";
 pub const SNAPSHOT: &str = "dev.mikanseilaboratory.kairos.snapshot";
 pub const ACTION: &str = "dev.mikanseilaboratory.kairos.action";
 pub const CUT: &str = "dev.mikanseilaboratory.kairos.cut";
 pub const AUTO: &str = "dev.mikanseilaboratory.kairos.auto";
 pub const AUX: &str = "dev.mikanseilaboratory.kairos.aux";
 pub const LAYER: &str = "dev.mikanseilaboratory.kairos.layer";
+pub const FORCE_SOURCE: &str = "dev.mikanseilaboratory.kairos.force_source";
+pub const MEDIA_STILL: &str = "dev.mikanseilaboratory.kairos.media_still";
+pub const LAYER_CUT: &str = "dev.mikanseilaboratory.kairos.layer_cut";
+pub const LAYER_AUTO: &str = "dev.mikanseilaboratory.kairos.layer_auto";
+pub const PLAYER: &str = "dev.mikanseilaboratory.kairos.player";
+pub const AUDIO_MUTE: &str = "dev.mikanseilaboratory.kairos.audio_mute";
+pub const INPUT_TALLY: &str = "dev.mikanseilaboratory.kairos.input_tally";
 pub const MULTIVIEWER: &str = "dev.mikanseilaboratory.kairos.multiviewer";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -23,12 +32,25 @@ impl LayerBus {
             other => Err(format!("unknown layer bus {other}")),
         }
     }
+
+    pub fn as_tcp(self) -> &'static str {
+        match self {
+            Self::SourceA => "sourceA",
+            Self::SourceB => "sourceB",
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
 pub enum Job {
     PlayMacro {
         id: String,
+        state: MacroState,
+    },
+    PlaySceneMacro {
+        scene: String,
+        id: String,
+        state: MacroState,
     },
     RecallSnapshot {
         scene: String,
@@ -56,20 +78,63 @@ pub enum Job {
         multiviewer: String,
         preset: u32,
     },
+    ForceSource {
+        scene: String,
+        layer: String,
+        bus: LayerBus,
+        source: String,
+    },
+    SetMediaStill {
+        scene: String,
+        layer: String,
+        bus: LayerBus,
+        still: String,
+    },
+    LayerTransition {
+        scene: String,
+        layer: String,
+        auto: bool,
+    },
+    Player {
+        player: String,
+        op: String,
+    },
+    AudioMute {
+        channel: Option<String>,
+        mute: u8,
+    },
 }
 
-pub fn needs_tally(action: &str) -> bool {
-    action == AUX || action == LAYER
+impl Job {
+    pub fn uses_tcp(&self) -> bool {
+        matches!(
+            self,
+            Self::ForceSource { .. }
+                | Self::SetMediaStill { .. }
+                | Self::LayerTransition { .. }
+                | Self::Player { .. }
+                | Self::AudioMute { .. }
+        )
+    }
 }
 
 pub fn skip_ok(action: &str) -> bool {
-    needs_tally(action)
+    matches!(
+        action,
+        AUX | LAYER | FORCE_SOURCE | MEDIA_STILL | INPUT_TALLY
+    )
 }
 
 pub fn build_job(action: &str, settings: &ActionSettings) -> Result<Job, String> {
     match action {
         MACRO => Ok(Job::PlayMacro {
             id: required(&settings.macro_id, "macro")?,
+            state: parse_macro_state(&settings.macro_state),
+        }),
+        SCENE_MACRO => Ok(Job::PlaySceneMacro {
+            scene: required(&settings.scene_id, "scene")?,
+            id: required(&settings.macro_id, "macro")?,
+            state: parse_macro_state(&settings.macro_state),
         }),
         SNAPSHOT => Ok(Job::RecallSnapshot {
             scene: required(&settings.scene_id, "scene")?,
@@ -91,16 +156,68 @@ pub fn build_job(action: &str, settings: &ActionSettings) -> Result<Job, String>
             aux: required(&settings.aux_id, "AUX")?,
             source: required(&settings.source, "source")?,
         }),
-        LAYER => Ok(Job::SetLayer {
+        LAYER | FORCE_SOURCE => {
+            let job_layer = || -> Result<_, String> {
+                Ok((
+                    required(&settings.scene_id, "scene")?,
+                    required(&settings.layer_id, "layer")?,
+                    parse_bus(&settings.bus)?,
+                    required(&settings.source, "source")?,
+                ))
+            };
+            let (scene, layer, bus, source) = job_layer()?;
+            if action == FORCE_SOURCE {
+                Ok(Job::ForceSource {
+                    scene,
+                    layer,
+                    bus,
+                    source,
+                })
+            } else {
+                Ok(Job::SetLayer {
+                    scene,
+                    layer,
+                    bus,
+                    source,
+                })
+            }
+        }
+        MEDIA_STILL => Ok(Job::SetMediaStill {
             scene: required(&settings.scene_id, "scene")?,
             layer: required(&settings.layer_id, "layer")?,
-            bus: LayerBus::parse(if settings.bus.trim().is_empty() {
-                "sourceA"
-            } else {
-                settings.bus.trim()
-            })?,
-            source: required(&settings.source, "source")?,
+            bus: parse_bus(&settings.bus)?,
+            still: required(&settings.still_id, "still")?,
         }),
+        LAYER_CUT => Ok(Job::LayerTransition {
+            scene: required(&settings.scene_id, "scene")?,
+            layer: required(&settings.layer_id, "layer")?,
+            auto: false,
+        }),
+        LAYER_AUTO => Ok(Job::LayerTransition {
+            scene: required(&settings.scene_id, "scene")?,
+            layer: required(&settings.layer_id, "layer")?,
+            auto: true,
+        }),
+        PLAYER => Ok(Job::Player {
+            player: required(&settings.player_id, "player")?,
+            op: required(&settings.player_op, "player action")?,
+        }),
+        AUDIO_MUTE => {
+            let target = settings.audio_target.trim();
+            if target.is_empty() {
+                return Err("audio target is not set".into());
+            }
+            let channel = if target.eq_ignore_ascii_case("master") {
+                None
+            } else {
+                Some(target.to_string())
+            };
+            Ok(Job::AudioMute {
+                channel,
+                mute: parse_mute(&settings.audio_mute)?,
+            })
+        }
+        INPUT_TALLY => Err("Input Tally has no press action".into()),
         MULTIVIEWER => {
             let preset = required(&settings.preset_id, "preset")?
                 .parse::<u32>()
@@ -111,6 +228,31 @@ pub fn build_job(action: &str, settings: &ActionSettings) -> Result<Job, String>
             })
         }
         other => Err(format!("unknown action {other}")),
+    }
+}
+
+fn parse_bus(value: &str) -> Result<LayerBus, String> {
+    LayerBus::parse(if value.trim().is_empty() {
+        "sourceA"
+    } else {
+        value.trim()
+    })
+}
+
+pub fn parse_macro_state(value: &str) -> MacroState {
+    match value.trim() {
+        "stop" => MacroState::Stop,
+        "record" => MacroState::Record,
+        "stop_record" => MacroState::StopRecord,
+        _ => MacroState::Play,
+    }
+}
+
+fn parse_mute(value: &str) -> Result<u8, String> {
+    match value.trim() {
+        "" | "0" | "unmute" | "false" => Ok(0),
+        "1" | "mute" | "true" => Ok(1),
+        other => Err(format!("unknown mute value {other}")),
     }
 }
 
@@ -137,6 +279,12 @@ mod tests {
             source: "IP1".into(),
             layer_id: "Background".into(),
             bus: "sourceA".into(),
+            still_id: "MEDIA.stills.clip.rr".into(),
+            player_id: "RR1".into(),
+            player_op: "play".into(),
+            audio_target: "master".into(),
+            audio_mute: "1".into(),
+            macro_state: "stop".into(),
             multiviewer_id: "0".into(),
             preset_id: "1".into(),
             ..ActionSettings::default()
@@ -170,5 +318,34 @@ mod tests {
             Job::SetLayer { bus, .. } => assert_eq!(bus, LayerBus::SourceA),
             other => panic!("{other:?}"),
         }
+    }
+
+    #[test]
+    fn macro_stop_and_force_source() {
+        let s = settings();
+        match build_job(MACRO, &s).unwrap() {
+            Job::PlayMacro { state, .. } => assert_eq!(state, MacroState::Stop),
+            other => panic!("{other:?}"),
+        }
+        match build_job(FORCE_SOURCE, &s).unwrap() {
+            Job::ForceSource { .. } => {}
+            other => panic!("{other:?}"),
+        }
+        match build_job(LAYER_AUTO, &s).unwrap() {
+            Job::LayerTransition { auto, .. } => assert!(auto),
+            other => panic!("{other:?}"),
+        }
+        match build_job(AUDIO_MUTE, &s).unwrap() {
+            Job::AudioMute { channel, mute } => {
+                assert!(channel.is_none());
+                assert_eq!(mute, 1);
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn input_tally_is_not_a_press() {
+        assert!(build_job(INPUT_TALLY, &settings()).is_err());
     }
 }

@@ -154,8 +154,48 @@ pub async fn datasource(
                 })
                 .collect())
         }
+        "kairos_scene_macros" => {
+            let Some(scene_id) = configured(&settings.scene_id) else {
+                return Ok(Vec::new());
+            };
+            let scene = client.get_scene(scene_id).await.map_err(err)?;
+            Ok(scene
+                .macros
+                .into_iter()
+                .map(|m| ListItem {
+                    label: m.name,
+                    value: m.uuid,
+                })
+                .collect())
+        }
+        "kairos_inputs" => {
+            let inputs = client.list_inputs().await.map_err(err)?;
+            Ok(inputs
+                .into_iter()
+                .map(|i| ListItem {
+                    label: i.name.clone(),
+                    value: i.uuid,
+                })
+                .collect())
+        }
+        "kairos_players" => Ok(player_items()),
         other => Err(format!("unknown datasource {other}")),
     }
+}
+
+pub fn player_items() -> Vec<ListItem> {
+    const PLAYERS: &[&str] = &[
+        "RR1", "RR2", "RR3", "RR4", "RR5", "RR6", "RR7", "RR8", "CP1", "CP2", "AP1", "AP2", "AP3",
+        "AP4", "AP5", "AP6", "AP7", "AP8", "AP9", "AP10", "AP11", "AP12", "AP13", "AP14", "AP15",
+        "AP16",
+    ];
+    PLAYERS
+        .iter()
+        .map(|name| ListItem {
+            label: (*name).to_string(),
+            value: (*name).to_string(),
+        })
+        .collect()
 }
 
 fn configured(value: &str) -> Option<&str> {

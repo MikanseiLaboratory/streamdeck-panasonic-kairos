@@ -52,13 +52,38 @@ pub struct ActionSettings {
     pub multiviewer_id: String,
     #[serde(default)]
     pub preset_id: String,
-    /// `manual` or `host\\tport\\tpassword\\thttps`.
+    /// `play`, `stop`, `record`, or `stop_record`.
+    #[serde(default)]
+    pub macro_state: String,
+    #[serde(default)]
+    pub still_id: String,
+    #[serde(default)]
+    pub player_id: String,
+    #[serde(default)]
+    pub player_op: String,
+    /// `master` or `Channel 1` … `Channel 16`.
+    #[serde(default)]
+    pub audio_target: String,
+    /// `0` unmute / `1` mute.
+    #[serde(default)]
+    pub audio_mute: String,
+    #[serde(default)]
+    pub input_id: String,
+    /// Empty uses 3005.
+    #[serde(default)]
+    pub tcp_port: String,
+    /// `manual` or `host\\tport\\tpassword\\thttps[\\ttcp_port]`.
     #[serde(default = "default_connection_pick")]
     pub connection_pick: String,
 }
 
 impl ActionSettings {
     pub fn connection(&self) -> (String, String, String, bool) {
+        let (host, port, password, https, _) = self.connection_full();
+        (host, port, password, https)
+    }
+
+    pub fn connection_full(&self) -> (String, String, String, bool, String) {
         let pick = self.connection_pick.trim();
         if pick != "manual" && !pick.is_empty() {
             let mut parts = pick.split('\t');
@@ -66,8 +91,9 @@ impl ActionSettings {
             let port = parts.next().unwrap_or("").trim().to_string();
             let password = parts.next().unwrap_or("").to_string();
             let https = matches!(parts.next(), Some("1") | Some("true"));
+            let tcp_port = parts.next().unwrap_or("").trim().to_string();
             if !host.is_empty() {
-                return (host, port, password, https);
+                return (host, port, password, https, tcp_port);
             }
         }
         (
@@ -75,7 +101,13 @@ impl ActionSettings {
             self.port.trim().to_string(),
             self.password.trim().to_string(),
             self.https,
+            self.tcp_port.trim().to_string(),
         )
+    }
+
+    pub fn tcp_port(&self) -> u16 {
+        let (_, _, _, _, tcp) = self.connection_full();
+        parse_tcp_port(&tcp)
     }
 
     pub fn http_config(&self) -> HttpConfig {
@@ -89,6 +121,15 @@ impl ActionSettings {
             .with_https(https)
             .with_credentials(Credentials::password(password))
             .with_timeout_ms(8_000)
+    }
+}
+
+pub fn parse_tcp_port(value: &str) -> u16 {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        3005
+    } else {
+        trimmed.parse().unwrap_or(3005)
     }
 }
 

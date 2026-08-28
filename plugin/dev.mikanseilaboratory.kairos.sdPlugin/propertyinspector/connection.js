@@ -42,6 +42,7 @@
     setSetting('port', parts[1] || '');
     setSetting('password', parts[2] || '');
     setSetting('https', parts[3] === '1');
+    if (parts.length > 4) setSetting('tcp_port', parts[4] || '');
     applyConnectionUi();
   }
 

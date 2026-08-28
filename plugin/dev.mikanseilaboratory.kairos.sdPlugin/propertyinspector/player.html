@@ -2,7 +2,7 @@
 <html lang="en-gb">
 <head>
   <meta charset="utf-8" />
-  <title>KAIROS Scene Action</title>
+  <title>KAIROS Player</title>
   <script src="sdpi-components.js"></script>
   <style>
     .pi-status { margin-top: 12px; padding: 8px; border-radius: 4px; font-size: 12px; }
@@ -27,44 +27,38 @@
   <sdpi-item label="Host">
     <sdpi-textfield setting="host" placeholder="192.168.10.10"></sdpi-textfield>
   </sdpi-item>
-
   <sdpi-item label="Port">
     <sdpi-textfield setting="port" placeholder="1234"></sdpi-textfield>
   </sdpi-item>
-
   <sdpi-item label="TCP Port">
     <sdpi-textfield setting="tcp_port" placeholder="3005"></sdpi-textfield>
   </sdpi-item>
-
   <sdpi-item label="Password">
     <sdpi-password setting="password"></sdpi-password>
   </sdpi-item>
-
   <sdpi-item label="HTTPS">
     <sdpi-checkbox setting="https"></sdpi-checkbox>
   </sdpi-item>
   </div>
-
-  <sdpi-item label="Scene">
-    <sdpi-select
-      setting="scene_id"
-      datasource="kairos_scenes"
-      loading="Loading scenes..."
-      show-refresh
-      hot-reload>
-    </sdpi-select>
+  <sdpi-item label="Player">
+    <sdpi-select setting="player_id" datasource="kairos_players" loading="Loading players..." hot-reload></sdpi-select>
   </sdpi-item>
-
   <sdpi-item label="Action">
-    <sdpi-select
-      setting="action_id"
-      datasource="kairos_actions"
-      loading="Loading actions..."
-      show-refresh
-      hot-reload>
+    <sdpi-select setting="player_op">
+      <option value="begin">Go to Begin</option>
+      <option value="rewind">Rewind</option>
+      <option value="step_back">Step back</option>
+      <option value="reverse">Reverse play</option>
+      <option value="play">Play</option>
+      <option value="pause">Pause</option>
+      <option value="step_forward">Step forward</option>
+      <option value="fast_forward">Fast forward</option>
+      <option value="end">Go to End</option>
+      <option value="repeat=0">Repeat off</option>
+      <option value="repeat=1">Repeat on</option>
     </sdpi-select>
   </sdpi-item>
-
   <script src="connection.js"></script>
 </body>
 </html>
+

@@ -14,8 +14,8 @@ path = "src/main.rs"
 
 [dependencies]
 futures = "0.3"
-panasonic-kairos = { git = "https://github.com/MikanseiLaboratory/panasonic-kairos-rs", default-features = false, features = ["tokio"] }
+panasonic-kairos = { git = "https://github.com/MikanseiLaboratory/panasonic-kairos-rs", rev = "91c3514db1f7b49daa8a885704f289a717f12a53", default-features = false, features = ["tokio"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 streamdeck-rs = "0.8"
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time", "net", "io-util"] }

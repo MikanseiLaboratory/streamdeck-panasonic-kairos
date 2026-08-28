@@ -2,7 +2,7 @@
 <html lang="en-gb">
 <head>
   <meta charset="utf-8" />
-  <title>KAIROS Scene Action</title>
+  <title>KAIROS Media Still</title>
   <script src="sdpi-components.js"></script>
   <style>
     .pi-status { margin-top: 12px; padding: 8px; border-radius: 4px; font-size: 12px; }
@@ -27,44 +27,35 @@
   <sdpi-item label="Host">
     <sdpi-textfield setting="host" placeholder="192.168.10.10"></sdpi-textfield>
   </sdpi-item>
-
   <sdpi-item label="Port">
     <sdpi-textfield setting="port" placeholder="1234"></sdpi-textfield>
   </sdpi-item>
-
   <sdpi-item label="TCP Port">
     <sdpi-textfield setting="tcp_port" placeholder="3005"></sdpi-textfield>
   </sdpi-item>
-
   <sdpi-item label="Password">
     <sdpi-password setting="password"></sdpi-password>
   </sdpi-item>
-
   <sdpi-item label="HTTPS">
     <sdpi-checkbox setting="https"></sdpi-checkbox>
   </sdpi-item>
   </div>
-
   <sdpi-item label="Scene">
-    <sdpi-select
-      setting="scene_id"
-      datasource="kairos_scenes"
-      loading="Loading scenes..."
-      show-refresh
-      hot-reload>
+    <sdpi-select setting="scene_id" datasource="kairos_scenes" loading="Loading scenes..." show-refresh hot-reload></sdpi-select>
+  </sdpi-item>
+  <sdpi-item label="Layer">
+    <sdpi-select setting="layer_id" datasource="kairos_layers" loading="Loading layers..." show-refresh hot-reload></sdpi-select>
+  </sdpi-item>
+  <sdpi-item label="Bus">
+    <sdpi-select setting="bus">
+      <option value="sourceA">sourceA</option>
+      <option value="sourceB">sourceB</option>
     </sdpi-select>
   </sdpi-item>
-
-  <sdpi-item label="Action">
-    <sdpi-select
-      setting="action_id"
-      datasource="kairos_actions"
-      loading="Loading actions..."
-      show-refresh
-      hot-reload>
-    </sdpi-select>
+  <sdpi-item label="Still">
+    <sdpi-select setting="still_id" datasource="kairos_stills" loading="Loading stills..." show-refresh hot-reload></sdpi-select>
   </sdpi-item>
-
   <script src="connection.js"></script>
 </body>
 </html>
+
