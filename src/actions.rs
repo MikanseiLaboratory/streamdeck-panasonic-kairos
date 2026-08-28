@@ -1,13 +1,13 @@
 use crate::settings::ActionSettings;
 
-pub const MACRO: &str = "dev.miseinul.kairos.macro";
-pub const SNAPSHOT: &str = "dev.miseinul.kairos.snapshot";
-pub const ACTION: &str = "dev.miseinul.kairos.action";
-pub const CUT: &str = "dev.miseinul.kairos.cut";
-pub const AUTO: &str = "dev.miseinul.kairos.auto";
-pub const AUX: &str = "dev.miseinul.kairos.aux";
-pub const LAYER: &str = "dev.miseinul.kairos.layer";
-pub const MULTIVIEWER: &str = "dev.miseinul.kairos.multiviewer";
+pub const MACRO: &str = "dev.mikanseilaboratory.kairos.macro";
+pub const SNAPSHOT: &str = "dev.mikanseilaboratory.kairos.snapshot";
+pub const ACTION: &str = "dev.mikanseilaboratory.kairos.action";
+pub const CUT: &str = "dev.mikanseilaboratory.kairos.cut";
+pub const AUTO: &str = "dev.mikanseilaboratory.kairos.auto";
+pub const AUX: &str = "dev.mikanseilaboratory.kairos.aux";
+pub const LAYER: &str = "dev.mikanseilaboratory.kairos.layer";
+pub const MULTIVIEWER: &str = "dev.mikanseilaboratory.kairos.multiviewer";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LayerBus {

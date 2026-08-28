@@ -32,8 +32,8 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path plugin/dev.miseinul.kairos.sdPlugin/bin | Out-Null
-          Copy-Item target/release/plugin.exe plugin/dev.miseinul.kairos.sdPlugin/bin/plugin.exe
+          New-Item -ItemType Directory -Force -Path plugin/dev.mikanseilaboratory.kairos.sdPlugin/bin | Out-Null
+          Copy-Item target/release/plugin.exe plugin/dev.mikanseilaboratory.kairos.sdPlugin/bin/plugin.exe
 
       - name: Build macOS universal
         if: runner.os == 'macOS'
@@ -41,15 +41,15 @@ jobs:
           rustup target add x86_64-apple-darwin aarch64-apple-darwin
           cargo build --release --target aarch64-apple-darwin
           cargo build --release --target x86_64-apple-darwin
-          mkdir -p plugin/dev.miseinul.kairos.sdPlugin/bin
-          lipo -create -output plugin/dev.miseinul.kairos.sdPlugin/bin/plugin \
+          mkdir -p plugin/dev.mikanseilaboratory.kairos.sdPlugin/bin
+          lipo -create -output plugin/dev.mikanseilaboratory.kairos.sdPlugin/bin/plugin \
             target/aarch64-apple-darwin/release/plugin \
             target/x86_64-apple-darwin/release/plugin
 
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: plugin/dev.miseinul.kairos.sdPlugin
+          path: plugin/dev.mikanseilaboratory.kairos.sdPlugin
 
   release:
     needs: build
@@ -66,7 +66,7 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          PLUGIN=dev.miseinul.kairos.sdPlugin
+          PLUGIN=dev.mikanseilaboratory.kairos.sdPlugin
           VERSION="${TAG#v}"
           if [[ "$VERSION" =~ ^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
             PLUGIN_VERSION="${BASH_REMATCH[1]}"
@@ -93,7 +93,7 @@ jobs:
             --output . \
             --force \
             --no-update-check
-          test -f dev.miseinul.kairos.streamDeckPlugin
+          test -f dev.mikanseilaboratory.kairos.streamDeckPlugin
 
       - name: Determine release channel
         id: channel
@@ -119,7 +119,7 @@ jobs:
           set -euo pipefail
           args=(
             "${{ github.ref_name }}"
-            "dev.miseinul.kairos.streamDeckPlugin"
+            "dev.mikanseilaboratory.kairos.streamDeckPlugin"
             --repo "${{ github.repository }}"
             --title "${{ github.ref_name }}"
             --generate-notes

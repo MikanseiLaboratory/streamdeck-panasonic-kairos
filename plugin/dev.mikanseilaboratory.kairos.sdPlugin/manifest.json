@@ -9,7 +9,7 @@
   "Icon": "images/plugin",
   "Category": "KAIROS",
   "CategoryIcon": "images/plugin",
-  "UUID": "dev.miseinul.kairos",
+  "UUID": "dev.mikanseilaboratory.kairos",
   "Version": "0.1.0.0",
   "OS": [
     { "Platform": "windows", "MinimumVersion": "10" },
@@ -22,7 +22,7 @@
       "Name": "Play Macro",
       "States": [{ "Image": "images/plugin" }],
       "Tooltip": "Play a KAIROS macro",
-      "UUID": "dev.miseinul.kairos.macro",
+      "UUID": "dev.mikanseilaboratory.kairos.macro",
       "PropertyInspectorPath": "propertyinspector/macro.html"
     },
     {
@@ -30,7 +30,7 @@
       "Name": "Recall Snapshot",
       "States": [{ "Image": "images/plugin" }],
       "Tooltip": "Recall a scene snapshot",
-      "UUID": "dev.miseinul.kairos.snapshot",
+      "UUID": "dev.mikanseilaboratory.kairos.snapshot",
       "PropertyInspectorPath": "propertyinspector/snapshot.html"
     },
     {
@@ -38,7 +38,7 @@
       "Name": "Scene Action",
       "States": [{ "Image": "images/plugin" }],
       "Tooltip": "Play a scene action (cut, auto, show_layer, …)",
-      "UUID": "dev.miseinul.kairos.action",
+      "UUID": "dev.mikanseilaboratory.kairos.action",
       "PropertyInspectorPath": "propertyinspector/action.html"
     },
     {
@@ -46,7 +46,7 @@
       "Name": "Cut",
       "States": [{ "Image": "images/plugin" }],
       "Tooltip": "Play the scene :cut action",
-      "UUID": "dev.miseinul.kairos.cut",
+      "UUID": "dev.mikanseilaboratory.kairos.cut",
       "PropertyInspectorPath": "propertyinspector/cut.html"
     },
     {
@@ -54,7 +54,7 @@
       "Name": "Auto",
       "States": [{ "Image": "images/plugin" }],
       "Tooltip": "Play the scene :auto action",
-      "UUID": "dev.miseinul.kairos.auto",
+      "UUID": "dev.mikanseilaboratory.kairos.auto",
       "PropertyInspectorPath": "propertyinspector/auto.html"
     },
     {
@@ -62,7 +62,7 @@
       "Name": "AUX Source",
       "States": [{ "Image": "images/plugin" }],
       "Tooltip": "Set an AUX bus source",
-      "UUID": "dev.miseinul.kairos.aux",
+      "UUID": "dev.mikanseilaboratory.kairos.aux",
       "PropertyInspectorPath": "propertyinspector/aux_source.html"
     },
     {
@@ -70,7 +70,7 @@
       "Name": "Layer Source",
       "States": [{ "Image": "images/plugin" }],
       "Tooltip": "Set a layer sourceA or sourceB",
-      "UUID": "dev.miseinul.kairos.layer",
+      "UUID": "dev.mikanseilaboratory.kairos.layer",
       "PropertyInspectorPath": "propertyinspector/layer.html"
     },
     {
@@ -78,7 +78,7 @@
       "Name": "Multiviewer Preset",
       "States": [{ "Image": "images/plugin" }],
       "Tooltip": "Recall a multiviewer preset",
-      "UUID": "dev.miseinul.kairos.multiviewer",
+      "UUID": "dev.mikanseilaboratory.kairos.multiviewer",
       "PropertyInspectorPath": "propertyinspector/multiviewer.html"
     }
   ]
